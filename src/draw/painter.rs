@@ -1,12 +1,14 @@
 use wgpu::{Device, Queue, TextureView};
+use crate::control::navigation::NavigationEvent;
 use crate::draw::geometry::GeometryPainter;
 use crate::geometry::point::Point;
+use crate::geometry::size::Size;
 
 pub(crate) trait Painter {
     fn draw(&mut self, queue: &Queue, device: &Device, view: &TextureView);
-    fn update_size(&mut self, screen_width: u32, screen_height: u32);
-    fn update_scale(&mut self, scale: f32);
+    fn update_size(&mut self, size: Size);
     fn update_pos(&mut self, pos: Point);
+    fn navigation_event(&mut self, navigation_event: NavigationEvent);
 }
 
 pub(crate) enum PainterLibrary {
@@ -22,18 +24,10 @@ impl Painter for PainterLibrary {
         }
     }
 
-    fn update_size(&mut self, screen_width: u32, screen_height: u32) {
+    fn update_size(&mut self, size: Size) {
         match self {
             PainterLibrary::Geometry(painter) => {
-                painter.update_size(screen_width, screen_height);
-            }
-        }
-    }
-
-    fn update_scale(&mut self, scale: f32) {
-        match self {
-            PainterLibrary::Geometry(painter) => {
-                painter.update_scale(scale);
+                painter.update_size(size);
             }
         }
     }
@@ -42,6 +36,14 @@ impl Painter for PainterLibrary {
         match self {
             PainterLibrary::Geometry(painter) => {
                 painter.update_pos(pos);
+            }
+        }
+    }
+
+    fn navigation_event(&mut self, navigation_event: NavigationEvent) {
+        match self {
+            PainterLibrary::Geometry(painter) => {
+                painter.navigation_event(navigation_event);
             }
         }
     }

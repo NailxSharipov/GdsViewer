@@ -5,8 +5,7 @@ use winit::event::{DeviceEvent, DeviceId, WindowEvent};
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window, WindowId};
 use crate::app::graphic::GraphicContext;
-use crate::draw::painter::Painter;
-use crate::geometry::point::Point;
+use crate::control::navigation::{NavigationControl};
 
 pub struct AppState {
     context: Arc<Mutex<Context>>,
@@ -14,15 +13,7 @@ pub struct AppState {
 
 impl AppState {
     pub fn new() -> Self {
-        AppState { context: Arc::new(Mutex::from(Context { state: ContextState::None, graphic: None, counter: 0 })) }
-    }
-
-    pub (crate) fn update_pos(&mut self, pos: Point) {
-        if let Ok(context) = &mut self.context.lock() {
-            if let Some(graphic) = &mut context.graphic {
-                graphic.painter_library.update_pos(pos);
-            }
-        }
+        AppState { context: Arc::new(Mutex::from(Context::new())) }
     }
 }
 
@@ -97,10 +88,15 @@ enum ContextState {
 pub struct Context {
     state: ContextState,
     graphic: Option<GraphicContext>,
+    navigation: NavigationControl,
     counter: i32,
 }
 
 impl Context {
+    fn new() -> Self {
+        Self { state: ContextState::None, graphic: None, navigation: NavigationControl::new(), counter: 0 }
+    }
+
     fn handle_window_event(&mut self, event_loop: &ActiveEventLoop, event: WindowEvent) {
         let graphic = if let Some(graphic) = &mut self.graphic {
             graphic
@@ -110,13 +106,18 @@ impl Context {
 
         match event {
             WindowEvent::Resized(new_size) => {
-                graphic.resize(new_size.width, new_size.height);
+                let new_size = graphic.resize(new_size.width, new_size.height);
+                self.navigation.update_size(new_size);
             }
             WindowEvent::RedrawRequested => {
                 graphic.draw();
             }
             WindowEvent::CloseRequested => event_loop.exit(),
-            _ => {}
+            _ => {
+                if let Some(nav_event) = self.navigation.process_event(event) {
+                    graphic.process_navigation_event(nav_event);
+                }
+            }
         };
     }
 }

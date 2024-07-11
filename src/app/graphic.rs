@@ -1,9 +1,10 @@
 use std::sync::Arc;
-use log::info;
 use wgpu::{Adapter, Device, Instance, Queue, Surface, SurfaceConfiguration};
 use winit::window::Window;
+use crate::control::navigation::NavigationEvent;
 use crate::draw::geometry::GeometryPainter;
 use crate::draw::painter::{Painter, PainterLibrary};
+use crate::geometry::size::Size;
 
 pub(crate) struct GraphicContext {
     pub(crate) window: Arc<Window>,
@@ -94,17 +95,25 @@ impl GraphicContext {
         frame.present();
     }
 
-    pub(crate) fn resize(&mut self, width: u32, height: u32) {
-        self.surface_config.width = width.clamp(100, 4_000);
-        self.surface_config.height = height.clamp(100, 4_000);
-
-        info!("w: {}, h: {}", width, height);
+    pub(crate) fn resize(&mut self, width: u32, height: u32) -> Size {
+        let width = width.clamp(100, 4_000);
+        let height = height.clamp(100, 4_000);
+        self.surface_config.width = width;
+        self.surface_config.height = height;
 
         self.surface.configure(&self.device, &self.surface_config);
 
-        self.painter_library.update_size(width, height);
+        let size = Size::new_uint(width, height);
+        self.painter_library.update_size(size);
 
         // On macos the window needs to be redrawn manually after resizing
         self.window.request_redraw();
+
+        size
     }
+
+    pub(crate) fn process_navigation_event(&mut self, navigation_event: NavigationEvent) {
+        self.painter_library.navigation_event(navigation_event);
+    }
+
 }

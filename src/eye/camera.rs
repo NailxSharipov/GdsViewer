@@ -1,3 +1,4 @@
+use log::{info, log};
 use crate::eye::transform::{Matrix4x4, OrthoNoRotTransformer};
 use crate::geometry::point::Point;
 use crate::geometry::rect::Rect;
@@ -32,6 +33,10 @@ impl OrthoNoRotCamera {
         self.timestamp
     }
 
+    pub(crate) fn zoom(&self) -> f32 {
+        self.zoom
+    }
+
     pub(crate) fn set_screen(&mut self, screen: Size) {
         self.screen = screen;
         self.update();
@@ -42,9 +47,23 @@ impl OrthoNoRotCamera {
         self.update();
     }
 
-    pub(crate) fn set_zoom(&mut self, zoom: f32) {
-        self.zoom = zoom;
+    pub(crate) fn set_zoom(&mut self, zoom: f32, cursor: Point) {
+        let cursor_world_before = self.convert_screen_to_world(cursor);
+
+        self.zoom = zoom.clamp(0.000_0001, 1000_000.0);
         self.update();
+
+        let cursor_world_after = self.convert_screen_to_world(cursor);
+
+        let dx = cursor_world_before.x - cursor_world_after.x;
+        let dy = cursor_world_before.y - cursor_world_after.y;
+
+        self.view_box.center.x += dx;
+        self.view_box.center.y += dy;
+
+        self.update();
+
+        info!("zoom: {zoom}");
     }
 
     pub(crate) fn move_to(&mut self, position: Point) {
@@ -69,17 +88,19 @@ impl OrthoNoRotCamera {
     }
 
     fn calculate_screen_to_world(&self, is_horizontal: bool) -> OrthoNoRotTransformer {
+        let view_box = self.view_box.scaled(self.zoom);
         let s = if is_horizontal {
-            self.view_box.size.width / self.screen.width
+            view_box.size.width / self.screen.width
         } else {
-            self.view_box.size.height / self.screen.height
+            view_box.size.height / self.screen.height
         };
+
 
         let sx = s;
         let sy = -s;
 
-        let tx = self.view_box.min_x();
-        let ty = self.view_box.min_y() + s * self.screen.height;
+        let tx = view_box.min_x();
+        let ty = view_box.min_y() + s * self.screen.height;
 
         OrthoNoRotTransformer {
             sx,
@@ -90,18 +111,19 @@ impl OrthoNoRotCamera {
     }
 
     fn calculate_world_to_clip(&self, is_horizontal: bool) -> OrthoNoRotTransformer {
+        let view_box = self.view_box.scaled(self.zoom);
         let (sx, sy) = if is_horizontal {
-            let sx = 2.0 / self.view_box.size.width;
-            let sy = 2.0 * self.screen.width / (self.view_box.size.width * self.screen.height);
+            let sx = 2.0 / view_box.size.width;
+            let sy = 2.0 * self.screen.width / (view_box.size.width * self.screen.height);
             (sx, sy)
         } else {
-            let sx = 2.0 * self.screen.height / (self.view_box.size.height * self.screen.width);
-            let sy = 2.0 / self.view_box.size.height;
+            let sx = 2.0 * self.screen.height / (view_box.size.height * self.screen.width);
+            let sy = 2.0 / view_box.size.height;
             (sx, sy)
         };
 
-        let tx = -sx * self.view_box.center.x;
-        let ty = -sy * self.view_box.center.y;
+        let tx = -sx * view_box.center.x;
+        let ty = -sy * view_box.center.y;
 
         OrthoNoRotTransformer {
             sx,
@@ -150,11 +172,51 @@ mod tests {
             height: 2.0,
         };
 
+        let mut camera = OrthoNoRotCamera::new(screen, view_box);
+        camera.set_zoom(2.0, Point { x: 0.5 * screen.width, y: 0.5 * screen.height });
+
+        let world = camera.screen_to_world.transform(Point { x: 1.25, y: 0.75 });
+
+        assert_points_eq(world, Point { x: 5.0, y: 4.0 }, 0.0001);
+    }
+
+    #[test]
+    fn test_2() {
+        let view_box = Rect::new(
+            Point { x: 3.0, y: 1.0 },
+            Point { x: 9.0, y: 5.0 },
+        );
+
+        let screen = Size {
+            width: 3.0,
+            height: 2.0,
+        };
+
         let camera = OrthoNoRotCamera::new(screen, view_box);
 
         let clip = camera.world_to_clip.transform(Point { x: 5.0, y: 4.0 });
 
         assert_points_eq(clip, Point { x: -1.0 / 3.0, y: 0.5 }, 0.0001);
+    }
+
+    #[test]
+    fn test_3() {
+        let view_box = Rect::new(
+            Point { x: 3.0, y: 1.0 },
+            Point { x: 9.0, y: 5.0 },
+        );
+
+        let screen = Size {
+            width: 3.0,
+            height: 2.0,
+        };
+
+        let mut camera = OrthoNoRotCamera::new(screen, view_box);
+        camera.set_zoom(2.0, Point { x: 0.5 * screen.width, y: 0.5 * screen.height });
+
+        let clip = camera.world_to_clip.transform(Point { x: 5.0, y: 4.0 });
+
+        assert_points_eq(clip, Point { x: -1.0 / 6.0, y: 0.25 }, 0.0001);
     }
 
     pub(crate) fn assert_points_eq(p1: Point, p2: Point, epsilon: f32) {

@@ -5,17 +5,16 @@ use crate::geometry::rect::Rect;
 use crate::geometry::size::Size;
 
 pub(crate) struct Document {
-    pub(crate) width: f32,
-    pub(crate) height: f32,
+    pub(crate) size: Size,
     pub(crate) mesh: Mesh,
 }
 
 impl Document {
-    pub(crate) fn five(width: f32, height: f32) -> Self {
+    pub(crate) fn five(size: Size) -> Self {
         let mut rects = Vec::new();
 
-        let a = width / 6.0;
-        let b = height / 6.0;
+        let a = size.width / 6.0;
+        let b = size.height / 6.0;
 
         let size = Size { width: 2.0 * a, height: 2.0 * b };
 
@@ -38,8 +37,7 @@ impl Document {
         }
 
         Self {
-            width,
-            height,
+            size,
             mesh,
         }
     }

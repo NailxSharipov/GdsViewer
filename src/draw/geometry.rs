@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use wgpu::{Buffer, BufferUsages, ColorTargetState, Device, Queue, RenderPipeline, TextureView, util::DeviceExt, BindGroup, BufferBindingType, ShaderStages, BufferAddress, BindGroupLayout};
+use crate::control::navigation::NavigationEvent;
 use crate::draw::brush::Brush;
 use crate::draw::document::Document;
 use crate::draw::painter::Painter;
@@ -18,20 +19,19 @@ pub(crate) struct GeometryPainter {
     transform_buffer: Buffer,
     bind_group: BindGroup,
     camera_timestamp: usize,
+    start_zoom: f32
 }
 
 impl GeometryPainter {
     pub(crate) fn create(color: ColorTargetState, device: &Device, screen_width: u32, screen_height: u32) -> Self {
-        let width = screen_width as f32;
-        let height = screen_height as f32;
+        let doc_size = Size::new(1000.0, 1000.0);
 
-        let document = Document::five(width, height);
-        let size = Size {
-            width,
-            height
-        };
+        let document = Document::five(doc_size);
 
-        let camera = OrthoNoRotCamera::new(size, Rect::with_size(size));
+        let camera = OrthoNoRotCamera::new(
+            Size::new_uint(screen_width, screen_height),
+            Rect::with_size(doc_size),
+        );
 
         // Create GPU buffers
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -129,10 +129,10 @@ impl GeometryPainter {
             transform_buffer,
             bind_group,
             camera,
-            camera_timestamp: usize::MAX
+            camera_timestamp: usize::MAX,
+            start_zoom: 1.0,
         }
     }
-
 
     fn build_pipeline(color: ColorTargetState, device: &Device, bind_group_layout: BindGroupLayout) -> RenderPipeline {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -303,43 +303,29 @@ impl Painter for GeometryPainter {
         queue.submit(Some(encoder.finish()));
     }
 
-    fn update_size(&mut self, screen_width: u32, screen_height: u32) {
-        self.camera.set_screen(Size {
-            width: screen_width as f32,
-            height: screen_height as f32,
-        });
-    }
-
-    fn update_scale(&mut self, scale: f32) {
-        self.camera.set_zoom(scale);
+    fn update_size(&mut self, size: Size) {
+        self.camera.set_screen(size);
     }
 
     fn update_pos(&mut self, pos: Point) {
         self.camera.move_to(pos);
     }
+
+    fn navigation_event(&mut self, navigation_event: NavigationEvent) {
+        match navigation_event {
+            NavigationEvent::StartZoom(s) => {
+                self.start_zoom = self.camera.zoom();
+                self.camera.set_zoom(self.start_zoom * s.scale, s.cursor);
+            }
+            NavigationEvent::ProcessZoom(e) => {
+                self.camera.set_zoom(self.start_zoom * e.scale, e.cursor);
+            }
+            NavigationEvent::EndZoom(e) => {
+                self.camera.set_zoom(self.start_zoom * e.scale, e.cursor);
+            }
+            NavigationEvent::CancelZoom(e) => {
+                self.camera.set_zoom(self.start_zoom * e.scale, e.cursor);
+            }
+        }
+    }
 }
-
-/*
-fn create_orthographic_matrix_with_camera(
-    screen: &Screen,
-    doc_width: f32,
-    doc_height: f32,
-) -> [f32; 16] {
-
-    let aspect_ratio = doc_width / doc_height;
-    let scaled_width = screen.height * aspect_ratio / screen.scale;
-    let scaled_height = screen.height / screen.scale;
-
-    let right = screen.pos.x + scaled_width * 0.5;
-    let left = screen.pos.x - scaled_width * 0.5;
-    let top = screen.pos.y - scaled_height * 0.5;
-    let bottom = screen.pos.y + scaled_height * 0.5;
-
-    [
-        2.0 / (right - left), 0.0, 0.0, 0.0,
-        0.0, 2.0 / (top - bottom), 0.0, 0.0,
-        0.0, 0.0, -1.0, 0.0,
-        -(right + left) / (right - left), -(top + bottom) / (top - bottom), 0.0, 1.0,
-    ]
-}
-*/
