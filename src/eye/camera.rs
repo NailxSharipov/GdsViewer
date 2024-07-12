@@ -37,6 +37,10 @@ impl OrthoNoRotCamera {
         self.zoom
     }
 
+    pub(crate) fn world_position(&self) -> Point {
+        self.view_box.center
+    }
+
     pub(crate) fn set_screen(&mut self, screen: Size) {
         self.screen = screen;
         self.update();
@@ -48,12 +52,12 @@ impl OrthoNoRotCamera {
     }
 
     pub(crate) fn set_zoom(&mut self, zoom: f32, cursor: Point) {
-        let cursor_world_before = self.convert_screen_to_world(cursor);
+        let cursor_world_before = self.convert_point_screen_to_world(cursor);
 
         self.zoom = zoom.clamp(0.000_0001, 1000_000.0);
         self.update();
 
-        let cursor_world_after = self.convert_screen_to_world(cursor);
+        let cursor_world_after = self.convert_point_screen_to_world(cursor);
 
         let dx = cursor_world_before.x - cursor_world_after.x;
         let dy = cursor_world_before.y - cursor_world_after.y;
@@ -71,8 +75,12 @@ impl OrthoNoRotCamera {
         self.update();
     }
 
-    pub(crate) fn convert_screen_to_world(&self, point: Point) -> Point {
-        self.screen_to_world.transform(point)
+    pub(crate) fn convert_point_screen_to_world(&self, point: Point) -> Point {
+        self.screen_to_world.transform_point(point)
+    }
+
+    pub(crate) fn convert_vector_screen_to_world(&self, point: Point) -> Point {
+        self.screen_to_world.transform_vector(point)
     }
 
     pub(crate) fn clip_matrix(&self) -> Matrix4x4 {
@@ -155,7 +163,7 @@ mod tests {
 
         let camera = OrthoNoRotCamera::new(screen, view_box);
 
-        let world = camera.screen_to_world.transform(Point { x: 1.0, y: 0.5 });
+        let world = camera.screen_to_world.transform_point(Point { x: 1.0, y: 0.5 });
 
         assert_points_eq(world, Point { x: 5.0, y: 4.0 }, 0.0001);
     }
@@ -175,7 +183,7 @@ mod tests {
         let mut camera = OrthoNoRotCamera::new(screen, view_box);
         camera.set_zoom(2.0, Point { x: 0.5 * screen.width, y: 0.5 * screen.height });
 
-        let world = camera.screen_to_world.transform(Point { x: 1.25, y: 0.75 });
+        let world = camera.screen_to_world.transform_point(Point { x: 1.25, y: 0.75 });
 
         assert_points_eq(world, Point { x: 5.0, y: 4.0 }, 0.0001);
     }
@@ -194,7 +202,7 @@ mod tests {
 
         let camera = OrthoNoRotCamera::new(screen, view_box);
 
-        let clip = camera.world_to_clip.transform(Point { x: 5.0, y: 4.0 });
+        let clip = camera.world_to_clip.transform_point(Point { x: 5.0, y: 4.0 });
 
         assert_points_eq(clip, Point { x: -1.0 / 3.0, y: 0.5 }, 0.0001);
     }
@@ -214,7 +222,7 @@ mod tests {
         let mut camera = OrthoNoRotCamera::new(screen, view_box);
         camera.set_zoom(2.0, Point { x: 0.5 * screen.width, y: 0.5 * screen.height });
 
-        let clip = camera.world_to_clip.transform(Point { x: 5.0, y: 4.0 });
+        let clip = camera.world_to_clip.transform_point(Point { x: 5.0, y: 4.0 });
 
         assert_points_eq(clip, Point { x: -1.0 / 6.0, y: 0.25 }, 0.0001);
     }

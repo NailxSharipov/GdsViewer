@@ -19,9 +19,16 @@ impl OrthoNoRotTransformer {
         }
     }
 
-    pub(super) fn transform(&self, point: Point) -> Point {
+    pub(super) fn transform_point(&self, point: Point) -> Point {
         let x = self.sx * point.x + self.tx;
         let y = self.sy * point.y + self.ty;
+
+        Point { x, y }
+    }
+
+    pub(super) fn transform_vector(&self, point: Point) -> Point {
+        let x = self.sx * point.x;
+        let y = self.sy * point.y;
 
         Point { x, y }
     }

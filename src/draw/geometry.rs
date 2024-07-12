@@ -19,7 +19,8 @@ pub(crate) struct GeometryPainter {
     transform_buffer: Buffer,
     bind_group: BindGroup,
     camera_timestamp: usize,
-    start_zoom: f32
+    start_zoom: f32,
+    start_dragged: Point,
 }
 
 impl GeometryPainter {
@@ -131,6 +132,7 @@ impl GeometryPainter {
             camera,
             camera_timestamp: usize::MAX,
             start_zoom: 1.0,
+            start_dragged: Point { x: 0.0, y: 0.0 }
         }
     }
 
@@ -325,6 +327,17 @@ impl Painter for GeometryPainter {
             }
             NavigationEvent::CancelZoom(e) => {
                 self.camera.set_zoom(self.start_zoom * e.scale, e.cursor);
+            }
+            NavigationEvent::StartDragged(e) => {
+                self.start_dragged = self.camera.world_position();
+            }
+            NavigationEvent::EndDragged(e) => {
+
+            }
+            NavigationEvent::MoveDragged(e) => {
+                let screen_delta = e.start - e.current;
+                let world_delta = self.camera.convert_vector_screen_to_world(screen_delta);
+                self.camera.move_to(self.start_dragged + world_delta);
             }
         }
     }

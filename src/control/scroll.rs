@@ -51,13 +51,13 @@ impl ScrollControl {
     fn accumulate(&mut self, delta: MouseScrollDelta) {
         match delta {
             MouseScrollDelta::LineDelta(x, y) => {
-                let x = self.scroll.x + x;
-                let y = self.scroll.y + y;
+                let x = self.scroll.x - x;
+                let y = self.scroll.y - y;
                 self.scroll = Point { x, y };
             }
             MouseScrollDelta::PixelDelta(data) => {
-                let x = self.scroll.x + data.x as f32;
-                let y = self.scroll.y + data.y as f32;
+                let x = self.scroll.x - data.x as f32;
+                let y = self.scroll.y - data.y as f32;
                 self.scroll = Point { x, y };
             }
         }
