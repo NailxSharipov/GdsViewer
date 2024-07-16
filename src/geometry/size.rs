@@ -5,9 +5,9 @@ pub(crate) struct Size {
 }
 
 impl Size {
-    pub(crate) fn new(width: f32, height: f32) -> Self {
-        Self { width, height }
-    }
+    // pub(crate) fn new(width: f32, height: f32) -> Self {
+    //     Self { width, height }
+    // }
 
     pub(crate) fn new_uint(width: u32, height: u32) -> Self {
         Self { width: width as f32, height: height as f32 }

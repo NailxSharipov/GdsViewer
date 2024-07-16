@@ -1,44 +1,152 @@
-use crate::draw::mesh::Mesh;
-use crate::draw::r#box::Box;
-use crate::geometry::point::Point;
-use crate::geometry::rect::Rect;
+use i_triangle::delaunay::triangulate::ShapeTriangulate;
+use i_triangle::i_overlay::i_float::point::IntPoint;
+use i_triangle::i_overlay::i_float::rect::IntRect;
+use i_triangle::i_overlay::i_shape::int::shape::IntShapes;
+use crate::draw::fill::brush::Brush;
+use crate::draw::index_mesh::ListMesh;
+use crate::draw::stroke::pencil::Pencil;
+use crate::draw::triangulation::PathTriangulation;
 use crate::geometry::size::Size;
 
+pub(crate) struct Layer {
+    pub(crate) fill_mesh: ListMesh,
+    pub(crate) stroke_mesh: ListMesh,
+    pub(crate) brush: Brush,
+    pub(crate) pencil: Pencil,
+    pub(crate) shapes: IntShapes,
+    pub(crate) width: f32,
+}
+
 pub(crate) struct Document {
+    pub(crate) layers: Vec<Layer>,
     pub(crate) size: Size,
-    pub(crate) mesh: Mesh,
 }
 
 impl Document {
-    pub(crate) fn five(size: Size) -> Self {
-        let mut rects = Vec::new();
+    pub(crate) fn polygons() -> Self {
+        let mut layers = Vec::new();
+        let mut rect = IntRect::new(i32::MAX, i32::MIN, i32::MAX, i32::MIN);
 
-        let a = size.width / 6.0;
-        let b = size.height / 6.0;
+        {
+            let plus = [
+                [
+                    IntPoint::new(0, 1),
+                    IntPoint::new(0, 2),
+                    IntPoint::new(1, 2),
+                    IntPoint::new(1, 3),
+                    IntPoint::new(2, 3),
+                    IntPoint::new(2, 2),
+                    IntPoint::new(3, 2),
+                    IntPoint::new(3, 1),
+                    IntPoint::new(2, 1),
+                    IntPoint::new(2, 0),
+                    IntPoint::new(1, 0),
+                    IntPoint::new(1, 1),
+                ].to_vec()
+            ].to_vec();
 
-        let size = Size { width: 2.0 * a, height: 2.0 * b };
+            let tor = [
+                [
+                    IntPoint::new(5, 0),
+                    IntPoint::new(4, 1),
+                    IntPoint::new(4, 2),
+                    IntPoint::new(5, 3),
+                    IntPoint::new(6, 3),
+                    IntPoint::new(7, 2),
+                    IntPoint::new(7, 1),
+                    IntPoint::new(6, 0),
+                ].to_vec(),
+                [
+                    IntPoint::new(5, 1),
+                    IntPoint::new(6, 1),
+                    IntPoint::new(6, 2),
+                    IntPoint::new(5, 2)
+                ].to_vec()
+            ].to_vec();
 
-        // left bottom
-        rects.push(Box { rect: Rect { center: Point { x: a, y: b }, size }, brush: 1 });
+            for path in plus.iter() {
+                for p in path.iter() {
+                    rect.unsafe_add_point(p);
+                }
+            }
 
-        // left top
-        rects.push(Box { rect: Rect { center: Point { x: a, y: 5.0 * b }, size }, brush: 1 });
+            for path in tor.iter() {
+                for p in path.iter() {
+                    rect.unsafe_add_point(p);
+                }
+            }
 
-        // right top
-        rects.push(Box { rect: Rect { center: Point { x: 5.0 * a, y: 5.0 * b }, size }, brush: 1 });
+            let plus_triangulation = plus.triangulation();
+            let tor_triangulation = tor.triangulation();
 
-        // right bottom
-        rects.push(Box { rect: Rect { center: Point { x: 5.0 * a, y: b }, size }, brush: 1 });
+            let mut fill_mesh = ListMesh::with_capacity(plus_triangulation.points.len() + tor_triangulation.points.len());
 
+            fill_mesh.append_triangulation(plus_triangulation);
+            fill_mesh.append_triangulation(tor_triangulation);
 
-        let mut mesh = Mesh::with_capacity(4 * rects.len());
-        for rect in rects {
-            mesh.append(rect.mesh());
+            layers.push(Layer {
+                fill_mesh,
+                stroke_mesh: ListMesh { points: vec![], indices: vec![] },
+                brush: Brush { red: 1.0, green: 0.0, blue: 0.0, alpha: 0.2 },
+                pencil: Pencil {
+                    red: 1.0,
+                    green: 0.0,
+                    blue: 0.0,
+                    alpha: 1.0,
+                },
+                shapes: vec![plus, tor],
+                width: 0.0,
+            }
+            );
         }
 
-        Self {
-            size,
-            mesh,
+        {
+            let square = [
+                [
+                    IntPoint::new(2, 0),
+                    IntPoint::new(2, 3),
+                    IntPoint::new(5, 3),
+                    IntPoint::new(5, 0),
+                ].to_vec()
+            ].to_vec();
+
+            for path in square.iter() {
+                for p in path.iter() {
+                    rect.unsafe_add_point(p);
+                }
+            }
+
+            let triangulation = square.triangulation();
+
+            let mut fill_mesh = ListMesh::with_capacity(triangulation.points.len());
+
+            fill_mesh.append_triangulation(triangulation);
+
+            layers.push(Layer {
+                fill_mesh,
+                stroke_mesh: ListMesh { points: vec![], indices: vec![] },
+                brush: Brush { red: 0.0, green: 0.0, blue: 1.0, alpha: 0.2 },
+                pencil: Pencil {
+                    red: 0.0,
+                    green: 0.0,
+                    blue: 1.0,
+                    alpha: 1.0,
+                },
+                shapes: vec![square],
+                width: 0.0,
+            });
         }
+
+        Self { layers, size: Size { width: rect.width() as f32, height: rect.height() as f32 } }
+    }
+}
+
+impl Layer {
+    pub(crate) fn build_strokes(&mut self, width: f32) {
+        if self.width == width {
+            return;
+        }
+        self.width = width;
+        self.stroke_mesh = self.shapes.triangulate_path(width);
     }
 }

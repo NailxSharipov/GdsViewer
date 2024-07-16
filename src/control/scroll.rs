@@ -1,4 +1,3 @@
-use log::info;
 use winit::event::{MouseScrollDelta, TouchPhase};
 use crate::control::navigation::{NavigationEvent, ZoomEvent};
 use crate::geometry::point::Point;
@@ -22,7 +21,7 @@ impl ScrollControl {
     }
 
     pub(super) fn on_scroll(&mut self, delta: MouseScrollDelta, phase: TouchPhase, cursor: Point) -> NavigationEvent {
-        info!("scroll: {:?} ", self.scroll);
+        // info!("scroll: {:?} ", self.scroll);
         match phase {
             TouchPhase::Started => {
                 self.scroll = Point { x: 0.0, y: 0.0 };

@@ -1,4 +1,3 @@
-use log::{info, log};
 use crate::eye::transform::{Matrix4x4, OrthoNoRotTransformer};
 use crate::geometry::point::Point;
 use crate::geometry::rect::Rect;
@@ -46,10 +45,10 @@ impl OrthoNoRotCamera {
         self.update();
     }
 
-    pub(crate) fn set_view_box(&mut self, view_box: Rect) {
-        self.view_box = view_box;
-        self.update();
-    }
+    // pub(crate) fn set_view_box(&mut self, view_box: Rect) {
+    //     self.view_box = view_box;
+    //     self.update();
+    // }
 
     pub(crate) fn set_zoom(&mut self, zoom: f32, cursor: Point) {
         let cursor_world_before = self.convert_point_screen_to_world(cursor);
@@ -67,12 +66,16 @@ impl OrthoNoRotCamera {
 
         self.update();
 
-        info!("zoom: {zoom}");
+        // info!("zoom: {zoom}");
     }
 
     pub(crate) fn move_to(&mut self, position: Point) {
         self.view_box.center = position;
         self.update();
+    }
+
+    pub(crate) fn convert_size_screen_to_world(&self, screen: f32) -> f32 {
+        self.screen_to_world.sy * screen
     }
 
     pub(crate) fn convert_point_screen_to_world(&self, point: Point) -> Point {

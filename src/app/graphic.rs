@@ -2,6 +2,7 @@ use std::sync::Arc;
 use wgpu::{Adapter, Device, Instance, Queue, Surface, SurfaceConfiguration};
 use winit::window::Window;
 use crate::control::navigation::NavigationEvent;
+use crate::draw::context::DrawContext;
 use crate::draw::geometry::GeometryPainter;
 use crate::draw::painter::{Painter, PainterLibrary};
 use crate::geometry::size::Size;
@@ -89,8 +90,13 @@ impl GraphicContext {
         let view = frame
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
+            let mut context = DrawContext {
+                device: &self.device,
+                queue: &self.queue,
+                view
+            };
 
-        self.painter_library.draw(&mut self.queue, &self.device, &view);
+        self.painter_library.draw(&mut context);
 
         frame.present();
     }

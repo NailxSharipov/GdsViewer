@@ -1,10 +1,24 @@
 use std::ops::{Add, AddAssign, Neg, Sub};
+use i_triangle::i_overlay::i_float::point::IntPoint;
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Point {
     pub(crate) x: f32,
     pub(crate) y: f32,
 }
+
+impl Point {
+    pub(crate) fn tangent(&self, r: f32) -> Point {
+        let l = (self.x * self.x + self.y * self.y).sqrt();
+        let i = r / l;
+        Point { x: -i * self.y, y: i * self.x }
+    }
+
+    pub(crate) fn with_int_point(point: &IntPoint) -> Self {
+        Self { x: point.x as f32, y: point.y as f32 }
+    }
+}
+
 
 impl Add for Point {
     type Output = Point;
