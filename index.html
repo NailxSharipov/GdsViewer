@@ -14,9 +14,6 @@
             width: 100%;
             height: auto;
         }
-        .control {
-            padding: 4px;
-        }
     </style>
 </head>
 <body>
@@ -24,7 +21,7 @@
     <canvas id="canvas" width="100" height="100"></canvas>
 </div>
 <script type="module">
-    import init, { App } from './pkg/wgpu_wasm.js';
+    import init, { App } from './pkg/viewer.js';
     async function run() {
         await init();
         console.log('wasm module inited');

@@ -1,0 +1,15 @@
+{
+  "name": "viewer",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "viewer_bg.wasm",
+    "viewer.js",
+    "viewer.d.ts"
+  ],
+  "main": "viewer.js",
+  "types": "viewer.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
